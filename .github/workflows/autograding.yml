@@ -1,0 +1,268 @@
+name: Student Department JOIN Autograding
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  autograding:
+
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: schooldb
+
+        ports:
+          - 3306:3306
+
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+
+      # 1. Checkout student repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+
+      # 2. Install MySQL client
+      - name: Install MySQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+
+      # 3. Wait for MySQL
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            --silent
+          do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+
+
+      # 4. Execute student's SQL
+      - name: Run Student SQL
+        run: |
+          mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb < starter.sql
+
+
+      # 5. Run tests
+      - name: Run Tests
+        run: |
+          mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb < test.sql > test_output.txt
+
+
+      # 6. Display test results
+      - name: Display Test Results
+        run: |
+          cat test_output.txt
+
+
+      # 7. Check Department count
+      - name: Check Department Table
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "SELECT COUNT(*) FROM Department;")
+
+          echo "Departments: $RESULT"
+
+          if [ "$RESULT" -ne 3 ]; then
+            echo "❌ Department table test failed"
+            exit 1
+          fi
+
+          echo "✅ Department table test passed"
+
+
+      # 8. Check Student count
+      - name: Check Student Table
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "SELECT COUNT(*) FROM Student;")
+
+          echo "Students: $RESULT"
+
+          if [ "$RESULT" -ne 4 ]; then
+            echo "❌ Student table test failed"
+            exit 1
+          fi
+
+          echo "✅ Student table test passed"
+
+
+      # 9. Check INNER JOIN
+      - name: Check INNER JOIN
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "
+            SELECT COUNT(*)
+            FROM Student
+            INNER JOIN Department
+            ON Student.DepartmentID = Department.DepartmentID;
+            ")
+
+          echo "JOIN result count: $RESULT"
+
+          if [ "$RESULT" -ne 4 ]; then
+            echo "❌ INNER JOIN test failed"
+            exit 1
+          fi
+
+          echo "✅ INNER JOIN test passed"
+
+
+      # 10. Check Arun
+      - name: Check Arun
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "
+            SELECT COUNT(*)
+            FROM Student
+            INNER JOIN Department
+            ON Student.DepartmentID = Department.DepartmentID
+            WHERE Student.StudentName = 'Arun'
+            AND Department.DepartmentName = 'Computer Science';
+            ")
+
+          if [ "$RESULT" -ne 1 ]; then
+            echo "❌ Arun JOIN test failed"
+            exit 1
+          fi
+
+          echo "✅ Arun JOIN test passed"
+
+
+      # 11. Check Divya
+      - name: Check Divya
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "
+            SELECT COUNT(*)
+            FROM Student
+            INNER JOIN Department
+            ON Student.DepartmentID = Department.DepartmentID
+            WHERE Student.StudentName = 'Divya'
+            AND Department.DepartmentName = 'Mathematics';
+            ")
+
+          if [ "$RESULT" -ne 1 ]; then
+            echo "❌ Divya JOIN test failed"
+            exit 1
+          fi
+
+          echo "✅ Divya JOIN test passed"
+
+
+      # 12. Check Karthik
+      - name: Check Karthik
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "
+            SELECT COUNT(*)
+            FROM Student
+            INNER JOIN Department
+            ON Student.DepartmentID = Department.DepartmentID
+            WHERE Student.StudentName = 'Karthik'
+            AND Department.DepartmentName = 'Computer Science';
+            ")
+
+          if [ "$RESULT" -ne 1 ]; then
+            echo "❌ Karthik JOIN test failed"
+            exit 1
+          fi
+
+          echo "✅ Karthik JOIN test passed"
+
+
+      # 13. Check Nisha
+      - name: Check Nisha
+        run: |
+
+          RESULT=$(mysql \
+            -h 127.0.0.1 \
+            -uroot \
+            -proot \
+            schooldb \
+            -N \
+            -e "
+            SELECT COUNT(*)
+            FROM Student
+            INNER JOIN Department
+            ON Student.DepartmentID = Department.DepartmentID
+            WHERE Student.StudentName = 'Nisha'
+            AND Department.DepartmentName = 'Physics';
+            ")
+
+          if [ "$RESULT" -ne 1 ]; then
+            echo "❌ Nisha JOIN test failed"
+            exit 1
+          fi
+
+          echo "✅ Nisha JOIN test passed"
+
+
+      # 14. Final result
+      - name: Final Result
+        run: |
+          echo ""
+          echo "========================================"
+          echo "🎉 ALL INNER JOIN TESTS PASSED!"
+          echo "========================================"
